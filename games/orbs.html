@@ -1,0 +1,23 @@
+<!doctype html><meta charset=utf-8><title>Magnet Orbs</title>
+<style>html,body{margin:0;height:100%;background:#06070e;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#0a0d18}</style>
+<canvas id=c width=520 height=520></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d");
+let p={x:260,y:260},down=0,orbs=[],score=0,combo=1,last=0;
+function spawn(){while(orbs.length<28)orbs.push({x:30+Math.random()*460,y:30+Math.random()*460,r:Math.random()<.12?11:7,v:Math.random()<.12?5:1});}
+spawn();
+c.addEventListener("pointerdown",e=>{down=1;aim(e);});
+c.addEventListener("pointermove",e=>{if(down)aim(e);});
+addEventListener("pointerup",()=>down=0);
+function aim(e){const r=c.getBoundingClientRect();p.x=e.clientX-r.left;p.y=e.clientY-r.top;}
+(function loop(){
+  const now=performance.now();
+  orbs.forEach(o=>{const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy)||1;if(down&&d<90){o.x+=dx/d*4;o.y+=dy/d*4;}if(d<18){score+=o.v*combo;combo=now-last<400?Math.min(8,combo+1):1;last=now;o.x=30+Math.random()*460;o.y=30+Math.random()*460;}});
+  g.fillStyle="#0a0d18";g.fillRect(0,0,520,520);
+  orbs.forEach(o=>{g.fillStyle=o.v>1?"#e8c872":"#7aa2ff";g.beginPath();g.arc(o.x,o.y,o.r,0,7);g.fill();});
+  g.strokeStyle="#7dffc355";if(down){g.beginPath();g.arc(p.x,p.y,90,0,7);g.stroke();}
+  g.fillStyle="#ff6ea8";g.beginPath();g.arc(p.x,p.y,12,0,7);g.fill();
+  g.fillStyle="#e8c872";g.fillText("Magnet Orbs  "+score+"  x"+combo,10,18);
+  requestAnimationFrame(loop);
+})();
+</script>

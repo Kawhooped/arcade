@@ -1,0 +1,174 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Brick Line</title>
+<style>
+  html,body{margin:0;height:100%;background:#07080f;color:#f4f1e8;font:14px ui-monospace,monospace;overflow:hidden}
+  canvas{display:block;margin:auto;max-width:100%;max-height:100%;background:#0c1020;touch-action:none}
+</style>
+<canvas id=c width=480 height=640></canvas>
+<script>
+const c = document.getElementById("c");
+const g = c.getContext("2d");
+const W = 480, H = 640, BR = 8, PW = 88, PH = 12;
+const pal = ["#ff6ea8","#7dffc3","#7aa2ff","#e8c872","#c9a0ff"];
+let px = W/2, pv = 0, ball, bricks = [], bits = [], live = 1, served = 0, score = 0, lives = 3, spin = 0, wall = 1;
+
+function mpos(e) {
+  const r = c.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (W / r.width),
+    y: (e.clientY - r.top) * (H / r.height)
+  };
+}
+
+function wallUp() {
+  bricks = [];
+  for (let y = 0; y < 5; y++)
+    for (let x = 0; x < 8; x++)
+      bricks.push({ x: 16 + x * 58, y: 48 + y * 28, w: 52, h: 20, ok: 1, hp: y === 0 ? 2 : 1, hue: y });
+}
+
+function attach() {
+  ball = { x: px, y: H - 40, vx: 0, vy: 0 };
+  served = 0;
+}
+
+function serve() {
+  if (served || !live) return;
+  const dir = pv === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(pv);
+  ball.vx = dir * (3.4 + Math.min(4, Math.abs(pv) * 0.08));
+  ball.vy = -6.2;
+  served = 1;
+}
+
+function resetMatch() {
+  score = 0; lives = 3; wall = 1; live = 1; bits = [];
+  wallUp(); px = W/2; attach();
+}
+
+resetMatch();
+
+c.addEventListener("pointermove", e => {
+  const nx = Math.max(PW/2, Math.min(W - PW/2, mpos(e).x));
+  pv = nx - px;
+  px = nx;
+  if (!served && live) ball.x = px;
+});
+c.addEventListener("pointerdown", e => {
+  c.setPointerCapture?.(e.pointerId);
+  if (!live) { resetMatch(); return; }
+  serve();
+});
+addEventListener("keydown", e => {
+  if (e.code === "Space") { e.preventDefault(); if (!live) resetMatch(); else serve(); }
+});
+
+function bounceBrick(b) {
+  const nearestX = Math.max(b.x, Math.min(ball.x, b.x + b.w));
+  const nearestY = Math.max(b.y, Math.min(ball.y, b.y + b.h));
+  const dx = ball.x - nearestX, dy = ball.y - nearestY;
+  const d2 = dx*dx + dy*dy;
+  if (d2 > BR*BR) return false;
+  const overlapX = BR - Math.abs(ball.x - (b.x + b.w/2)) + b.w/2;
+  const overlapY = BR - Math.abs(ball.y - (b.y + b.h/2)) + b.h/2;
+  if (overlapX < overlapY) {
+    ball.vx = Math.abs(ball.vx) * (ball.x < b.x + b.w/2 ? -1 : 1);
+    ball.x += ball.x < b.x + b.w/2 ? -2 : 2;
+  } else {
+    ball.vy = Math.abs(ball.vy) * (ball.y < b.y + b.h/2 ? -1 : 1);
+    ball.y += ball.y < b.y + b.h/2 ? -2 : 2;
+  }
+  return true;
+}
+
+function cap() {
+  const sp = Math.hypot(ball.vx, ball.vy);
+  if (sp > 11) { ball.vx *= 11/sp; ball.vy *= 11/sp; }
+  if (served && Math.abs(ball.vy) < 3.2) ball.vy = Math.sign(ball.vy || -1) * 3.2;
+}
+
+(function loop() {
+  g.fillStyle = "#0c1020"; g.fillRect(0,0,W,H);
+  g.fillStyle = "#e8c872"; g.fillRect(px - PW/2, H - 28, PW, PH);
+
+  if (live && served) {
+    ball.vy += 0.028;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    spin += ball.vx * 0.05;
+    if (ball.x < BR) { ball.x = BR; ball.vx = Math.abs(ball.vx); }
+    if (ball.x > W - BR) { ball.x = W - BR; ball.vx = -Math.abs(ball.vx); }
+    if (ball.y < BR) { ball.y = BR; ball.vy = Math.abs(ball.vy); }
+
+    const py = H - 28;
+    if (ball.vy > 0 && ball.y + BR >= py && ball.y < py + PH + 8 && ball.x > px - PW/2 - BR && ball.x < px + PW/2 + BR) {
+      const hit = (ball.x - px) / (PW/2);
+      ball.y = py - BR - 0.5;
+      ball.vy = -Math.abs(ball.vy);
+      ball.vx += hit * 2.4 + pv * 0.08;
+      cap();
+    }
+
+    if (ball.y > H + 20) {
+      lives -= 1;
+      if (lives <= 0) live = 0;
+      else attach();
+    }
+
+    for (const b of bricks) {
+      if (!b.ok) continue;
+      if (!bounceBrick(b)) continue;
+      b.hp -= 1;
+      if (b.hp <= 0) {
+        b.ok = 0;
+        score += 10 * wall;
+        for (let i = 0; i < 8; i++)
+          bits.push({ x: b.x + b.w/2, y: b.y + b.h/2, vx: (Math.random()-.5)*7, vy: (Math.random()-.5)*5 - 1, life: 32, hue: b.hue });
+      } else score += 4;
+      cap();
+      break;
+    }
+
+    if (bricks.every(b => !b.ok)) {
+      wall += 1;
+      wallUp();
+      attach();
+    }
+  } else if (live && !served) {
+    ball.x = px;
+    ball.y = H - 40;
+  }
+
+  bits.forEach(p => { p.vy += 0.2; p.x += p.vx; p.y += p.vy; p.life--; });
+  bits = bits.filter(p => p.life > 0);
+
+  bricks.forEach(b => {
+    if (!b.ok) return;
+    g.fillStyle = pal[b.hue];
+    g.globalAlpha = b.hp > 1 ? 1 : 0.75;
+    g.fillRect(b.x, b.y, b.w, b.h);
+    g.globalAlpha = 1;
+  });
+  bits.forEach(p => {
+    g.globalAlpha = p.life/32;
+    g.fillStyle = pal[p.hue];
+    g.fillRect(p.x, p.y, 4, 4);
+    g.globalAlpha = 1;
+  });
+
+  g.save();
+  g.translate(ball.x, ball.y);
+  g.rotate(spin);
+  g.fillStyle = "#fff";
+  g.beginPath(); g.arc(0,0,BR,0,Math.PI*2); g.fill();
+  g.fillStyle = "#7dffc3"; g.fillRect(0,-2, BR, 4);
+  g.restore();
+
+  g.fillStyle = "#e8c872";
+  const msg = live
+    ? (`Brick Line  ${score}  wall ${wall}  lives ${lives}` + (served ? "" : "  click to serve"))
+    : `Game over  ${score}  click to restart`;
+  g.fillText(msg, 10, 22);
+  requestAnimationFrame(loop);
+})();
+</script>

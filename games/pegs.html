@@ -1,0 +1,35 @@
+<!doctype html><meta charset=utf-8><title>Peg Drop</title>
+<style>html,body{margin:0;height:100%;background:#12081a;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#160c22}</style>
+<canvas id=c width=480 height=640></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d"),G=0.22;
+let pegs=[],ball=null,aim=0,balls=6,score=0,parts=[];
+function reset(){pegs=[];for(let y=0;y<8;y++)for(let x=0;x<7;x++)pegs.push({x:50+x*56+(y%2)*28,y:90+y*52,r:9,hit:0,lit:y%3===0});ball=null;aim=0;balls=6;score=0;parts=[];}
+reset();
+c.addEventListener("mousemove",e=>{const r=c.getBoundingClientRect();aim=(e.clientX-r.left-240)/240;});
+c.addEventListener("click",()=>{if(!ball&&balls>0){ball={x:240,y:40,vx:aim*5.5,vy:1.2,r:8};balls--;} else if(!ball&&balls<=0) reset();});
+(function loop(){
+  if(ball){
+    ball.vy+=G; ball.x+=ball.vx; ball.y+=ball.vy;
+    if(ball.x<12||ball.x>468) ball.vx*=-0.92;
+    pegs.forEach(p=>{
+      const dx=ball.x-p.x,dy=ball.y-p.y,d=Math.hypot(dx,dy)||1;
+      if(d<p.r+ball.r){
+        const nx=dx/d,ny=dy/d, v=ball.vx*nx+ball.vy*ny;
+        if(v<0){ball.vx-=2*v*nx;ball.vy-=2*v*ny;ball.vx*=0.92;ball.vy*=0.92;}
+        ball.x+=nx*2;ball.y+=ny*2;
+        if(!p.hit){p.hit=1;score+=p.lit?80:20;for(let i=0;i<8;i++)parts.push({x:p.x,y:p.y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:18,c:p.lit?"#e8c872":"#c9a0ff"});}
+      }
+    });
+    if(ball.y>650) ball=null;
+  }
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;});parts=parts.filter(p=>p.life>0);
+  g.fillStyle="#160c22";g.fillRect(0,0,480,640);
+  pegs.forEach(p=>{g.fillStyle=p.hit?"#2a2040":(p.lit?"#e8c872":"#c9a0ff");g.beginPath();g.arc(p.x,p.y,p.r,0,7);g.fill();});
+  parts.forEach(p=>{g.globalAlpha=p.life/18;g.fillStyle=p.c;g.fillRect(p.x,p.y,3,3);g.globalAlpha=1;});
+  if(ball){g.fillStyle="#7dffc3";g.beginPath();g.arc(ball.x,ball.y,ball.r,0,7);g.fill();}
+  else {g.strokeStyle="#7dffc3";g.beginPath();g.moveTo(240,40);g.lineTo(240+aim*80,100);g.stroke();}
+  g.fillStyle="#e8c872";g.fillText("Peg Drop  "+score+"  balls "+balls+"  (Peggle) click to drop",10,18);
+  requestAnimationFrame(loop);
+})();
+</script>

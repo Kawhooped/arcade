@@ -1,0 +1,37 @@
+<!doctype html><meta charset=utf-8><title>Cave Copter</title>
+<style>html,body{margin:0;height:100%;background:#020308;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#050814}</style>
+<canvas id=c width=640 height=400></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d");
+let y=200,vy=0,x=80,hold=0,cave=[],t=0,live=1,dist=0,parts=[];
+function reset(){y=200;vy=0;cave=[];t=0;live=1;dist=0;parts=[];let h=80;for(let i=0;i<40;i++){h+= (Math.random()-.5)*30;h=Math.max(40,Math.min(140,h));cave.push(h);}}
+reset();
+addEventListener("pointerdown",()=>{hold=1;if(!live)reset();});
+addEventListener("pointerup",()=>hold=0);
+addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();hold=1;if(!live)reset();}});
+addEventListener("keyup",e=>{if(e.code==="Space")hold=0;});
+(function loop(){
+  t++;
+  if(live){
+    vy += hold ? -0.42 : 0.38;
+    vy *= 0.985;
+    y += vy;
+    if(t%4===0){let last=cave[cave.length-1];last+=(Math.random()-.5)*18;cave.push(Math.max(36,Math.min(150,last)));if(cave.length>48)cave.shift();}
+    dist += 1;
+    const col = cave[8];
+    if(y<col+8 || y>400-col-8) {live=0; for(let i=0;i<24;i++) parts.push({x:x,y:y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:30});}
+  }
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life--;});
+  parts=parts.filter(p=>p.life>0);
+  g.fillStyle="#050814";g.fillRect(0,0,640,400);
+  g.fillStyle="#1a1030";
+  cave.forEach((h,i)=>{g.fillRect(i*16,0,16,h);g.fillRect(i*16,400-h,16,h);});
+  g.fillStyle=live?"#7dffc3":"#ff6ea8";
+  g.save();g.translate(x,y);g.rotate(Math.max(-.5,Math.min(.5,vy*0.08)));
+  g.fillRect(-14,-6,28,12);g.fillRect(8,-2,10,4);
+  g.restore();
+  parts.forEach(p=>{g.globalAlpha=p.life/30;g.fillRect(p.x,p.y,3,3);g.globalAlpha=1;});
+  g.fillStyle="#e8c872";g.fillText("Cave Copter  "+Math.floor(dist/10)+"  hold mouse/space  (Flash heli)",10,18);
+  requestAnimationFrame(loop);
+})();
+</script>

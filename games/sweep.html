@@ -1,0 +1,29 @@
+<!doctype html><meta charset=utf-8><title>Star Sweep</title>
+<style>html,body{margin:0;height:100%;background:#05060c;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#070a14}</style>
+<canvas id=c width=520 height=520></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d");
+let ship={x:260,y:260,a:0},keys={},shots=[],rocks=[],t=0,live=1,score=0;
+function rock(){return {x:Math.random()*520,y:Math.random()*520,vx:(Math.random()-.5)*2,vy:(Math.random()-.5)*2,r:12+Math.random()*18};}
+function reset(){ship={x:260,y:260,a:0};shots=[];rocks=Array.from({length:7},rock);live=1;score=0;t=0;}
+reset();
+addEventListener("keydown",e=>{keys[e.key]=1;if(e.key===" "){e.preventDefault();if(!live)reset();else shots.push({x:ship.x,y:ship.y,a:ship.a,life:50});}});
+addEventListener("keyup",e=>keys[e.key]=0);
+(function loop(){
+  t++;
+  if(live){if(keys.ArrowLeft)ship.a-=.08;if(keys.ArrowRight)ship.a+=.08;if(keys.ArrowUp){ship.x+=Math.cos(ship.a)*3;ship.y+=Math.sin(ship.a)*3;}
+    ship.x=(ship.x+520)%520;ship.y=(ship.y+520)%520;
+    shots.forEach(s=>{s.x+=Math.cos(s.a)*7;s.y+=Math.sin(s.a)*7;s.life--;});
+    shots=shots.filter(s=>s.life>0);
+    rocks.forEach(r=>{r.x=(r.x+r.vx+520)%520;r.y=(r.y+r.vy+520)%520;});
+    rocks.forEach((r,i)=>{if(Math.hypot(r.x-ship.x,r.y-ship.y)<r.r+8)live=0;
+      shots.forEach(s=>{if(Math.hypot(s.x-r.x,s.y-r.y)<r.r){score+=10;r.x=Math.random()*520;r.y=Math.random()*520;s.life=0;}});});
+  }
+  g.fillStyle="#070a14";g.fillRect(0,0,520,520);
+  g.strokeStyle="#c9a0ff";rocks.forEach(r=>{g.beginPath();g.arc(r.x,r.y,r.r,0,7);g.stroke();});
+  g.fillStyle="#e8c872";shots.forEach(s=>{g.fillRect(s.x-2,s.y-2,4,4);});
+  g.save();g.translate(ship.x,ship.y);g.rotate(ship.a);g.fillStyle="#7dffc3";g.beginPath();g.moveTo(14,0);g.lineTo(-10,8);g.lineTo(-10,-8);g.fill();g.restore();
+  g.fillStyle="#e8c872";g.fillText("Star Sweep  "+score+(live?"":"  space")+"  arrows+space",8,16);
+  requestAnimationFrame(loop);
+})();
+</script>

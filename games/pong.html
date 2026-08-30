@@ -1,0 +1,25 @@
+<!doctype html><meta charset=utf-8><title>Pulse Pong</title>
+<style>html,body{margin:0;height:100%;background:#07080f;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#0b1020}</style>
+<canvas id=c width=640 height=400></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d");
+let y=160,ay=160,b={x:320,y:200,vx:4,vy:2},ps=0,as=0,live=1;
+addEventListener("mousemove",e=>{const r=c.getBoundingClientRect();y=Math.max(0,Math.min(340,e.clientY-r.top-30));});
+addEventListener("keydown",e=>{if(e.key==="ArrowUp")y-=20;if(e.key==="ArrowDown")y+=20;if(e.key===" "){ps=as=0;b={x:320,y:200,vx:4,vy:2};live=1;} y=Math.max(0,Math.min(340,y));});
+(function loop(){
+  if(live){b.x+=b.vx;b.y+=b.vy;if(b.y<8||b.y>392)b.vy*=-1;
+    ay+=(b.y-20-ay)*0.09;
+    if(b.x<28&&b.y>y&&b.y<y+60)b.vx=Math.abs(b.vx);
+    if(b.x>612&&b.y>ay&&b.y<ay+60)b.vx=-Math.abs(b.vx);
+    if(b.x<0){as++;b={x:320,y:200,vx:4,vy:2};}
+    if(b.x>640){ps++;b={x:320,y:200,vx:-4,vy:2};}
+  }
+  g.fillStyle="#0b1020";g.fillRect(0,0,640,400);
+  g.fillStyle="#3a4068";for(let i=0;i<20;i++)g.fillRect(318,i*20,4,10);
+  g.fillStyle="#7dffc3";g.fillRect(12,y,10,60);
+  g.fillStyle="#ff6ea8";g.fillRect(618,ay,10,60);
+  g.fillStyle="#fff";g.beginPath();g.arc(b.x,b.y,7,0,7);g.fill();
+  g.fillStyle="#e8c872";g.fillText("Pulse Pong  "+ps+" – "+as,12,20);
+  requestAnimationFrame(loop);
+})();
+</script>

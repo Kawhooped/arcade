@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcade</title>
+  <style>
+    :root { --bg:#0b0c14; --panel:#16182a; --gold:#e8c872; --mint:#7dffc3; --pink:#ff6ea8; --text:#f4f1e8; --dim:#8b90a8; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+    body { background: radial-gradient(1200px 600px at 50% -10%, #1c2040, var(--bg)); }
+    header { padding:18px 22px 8px; display:flex; justify-content:space-between; align-items:end; gap:12px; flex-wrap:wrap; }
+    h1 { margin:0; font-size:clamp(22px, 4vw, 36px); letter-spacing:.12em; text-transform:uppercase; color:var(--gold); text-shadow: 0 0 18px #e8c87255; }
+    header p { margin:0; color:var(--dim); max-width:42ch; font-size:13px; }
+    .cabinet { width:min(1100px, calc(100% - 24px)); margin:0 auto 24px; }
+    .screen { border:6px solid #2a2e48; border-radius:18px; background:#05060c; min-height:420px; overflow:hidden; box-shadow: 0 30px 80px #000a, inset 0 0 40px #7dffc311; }
+    .screen.play { min-height: min(78vh, 720px); }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:12px; padding:16px; }
+    .cart { background: linear-gradient(180deg, #242844, #121426); border:2px solid #3a4068; border-radius:10px; padding:12px; cursor:pointer; text-align:left; color:inherit; min-height:140px; font: inherit; }
+    .cart:hover, .cart:focus-visible { border-color: var(--gold); outline: none; transform: translateY(-2px); }
+    .cart .tag { font-size:10px; letter-spacing:.16em; color:var(--mint); }
+    .cart h2 { margin:8px 0 6px; font-size:15px; }
+    .cart p { margin:0; color:var(--dim); font-size:12px; }
+    .bar { display:flex; gap:8px; padding:10px 14px; background:#0e1020; border-bottom:1px solid #2a2e48; }
+    button.nav { background:#1c2140; color:var(--text); border:1px solid #3a4068; border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; }
+    iframe { width:100%; height: calc(78vh - 48px); min-height:480px; border:0; background:#000; }
+    footer { color:var(--dim); font-size:11px; padding:0 8px 20px; }
+  </style>
+</head>
+<body>
+  <div class="cabinet">
+    <header>
+      <div>
+        <h1>Arcade</h1>
+        <p>Your carts plus original cabinet games. Not a Nintendo emulator. No ROMs.</p>
+      </div>
+    </header>
+    <div class="screen" id="screen"></div>
+    <footer>http://127.0.0.1:8933/ · Dignity + Cyber Town are the real titles. Mini-games are ours.</footer>
+  </div>
+  <script>
+    const screen = document.getElementById("screen");
+    async function shelf() {
+      const carts = await (await fetch("/carts.json")).json();
+      screen.classList.remove("play");
+      screen.innerHTML = `<div class="grid">${carts.map(c => `
+        <button class="cart" data-href="${c.href}">
+          <div class="tag">${c.tag}</div>
+          <h2>${c.title}</h2>
+          <p>${c.blurb}</p>
+        </button>`).join("")}</div>`;
+      screen.querySelectorAll(".cart").forEach(btn => btn.onclick = () => play(btn.dataset.href, btn.querySelector("h2").textContent));
+    }
+    function play(href, title) {
+      screen.classList.add("play");
+      screen.innerHTML = `<div class="bar"><button class="nav" type="button" id="back">◀ Cabinet</button><span>${title}</span></div>
+        <iframe src="${href}" title="${title}"></iframe>`;
+      document.getElementById("back").onclick = shelf;
+    }
+    shelf();
+  </script>
+</body>
+</html>

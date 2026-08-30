@@ -1,0 +1,14 @@
+[
+  {"id": "dignity", "title": "Dignity Coin Rush", "tag": "YOURS", "href": "/play/dignity", "blurb": "Hold and sweep. Vacuum coins."},
+  {"id": "cyber", "title": "Cyber Town", "tag": "YOURS", "href": "/play/cyber", "blurb": "Layered town. SNES pixels, our art."},
+  {"id": "heli", "title": "Cave Copter", "tag": "FLASH", "href": "/games/heli.html", "blurb": "Hold to climb. Flash helicopter cave."},
+  {"id": "sling", "title": "Sling Keep", "tag": "FLASH", "href": "/games/sling.html", "blurb": "Pull back. Knock the keep down."},
+  {"id": "pegs", "title": "Peg Drop", "tag": "FLASH", "href": "/games/pegs.html", "blurb": "Peggle bounce. Light the pegs."},
+  {"id": "ragdoll", "title": "Stick Toss", "tag": "FLASH", "href": "/games/ragdoll.html", "blurb": "Ragdoll. Drag limbs. Hit the floor."},
+  {"id": "brick", "title": "Brick Line", "tag": "ARCADE", "href": "/games/brick.html", "blurb": "Gravity, english, brick debris."},
+  {"id": "lanes", "title": "Night Lanes", "tag": "ARCADE", "href": "/games/lanes.html", "blurb": "Three lanes. Survive the lights."},
+  {"id": "pong", "title": "Pulse Pong", "tag": "ARCADE", "href": "/games/pong.html", "blurb": "You vs the cabinet."},
+  {"id": "coil", "title": "Coil", "tag": "ARCADE", "href": "/games/coil.html", "blurb": "Eat orbs. Don't bite yourself."},
+  {"id": "orbs", "title": "Magnet Orbs", "tag": "ARCADE", "href": "/games/orbs.html", "blurb": "Hold to pull. Chain pickups."},
+  {"id": "sweep", "title": "Star Sweep", "tag": "ARCADE", "href": "/games/sweep.html", "blurb": "Spin, shoot, last a minute."}
+]

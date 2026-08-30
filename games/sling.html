@@ -1,0 +1,52 @@
+<!doctype html><meta charset=utf-8><title>Sling Keep</title>
+<style>html,body{margin:0;height:100%;background:#140e08;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#1a140c}</style>
+<canvas id=c width=720 height=420></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d"),G=0.28,R=0.62;
+let blocks=[],bird=null,drag=null,score=0,shots=4;
+function block(x,y,w,h){return {x,y,w,h,vx:0,vy:0,ok:1,rot:0,vr:0};}
+function reset(){
+  blocks=[];
+  for(let i=0;i<4;i++) blocks.push(block(520, 360-i*36, 34, 34));
+  for(let i=0;i<3;i++) blocks.push(block(560, 360-i*36, 34, 34));
+  for(let i=0;i<2;i++) blocks.push(block(500+i*40, 252, 36, 14));
+  bird=null; drag=null; shots=4; score=0;
+}
+reset();
+function spawn(){bird={x:120,y:300,vx:0,vy:0,r:12,fly:0};}
+spawn();
+c.addEventListener("pointerdown",e=>{const p=pt(e);if(!liveBird()&&shots<=0)reset();if(bird&&!bird.fly)drag=p;});
+c.addEventListener("pointermove",e=>{if(drag&&bird&&!bird.fly){const p=pt(e);bird.x=p.x;bird.y=p.y;}});
+c.addEventListener("pointerup",e=>{if(!drag||!bird)return; bird.vx=(120-bird.x)*0.18; bird.vy=(300-bird.y)*0.18; bird.fly=1; shots--; drag=null;});
+function pt(e){const r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+function liveBird(){return bird&&bird.fly&&bird.y<440&&Math.hypot(bird.vx,bird.vy)>0.4;}
+function hit(b,o){return o.x+o.r>b.x&&o.x-o.r<b.x+b.w&&o.y+o.r>b.y&&o.y-o.r<b.y+b.h;}
+(function loop(){
+  if(bird&&bird.fly){
+    bird.vy+=G; bird.x+=bird.vx; bird.y+=bird.vy; bird.vx*=0.995;
+    if(bird.y>390){bird.y=390;bird.vy*=-0.35;bird.vx*=0.7;if(Math.abs(bird.vy)<1) bird={...bird,fly:0,dead:1};}
+    blocks.forEach(b=>{
+      if(!b.ok||!hit(b,bird))return;
+      const imp=Math.hypot(bird.vx,bird.vy);
+      b.vx+=bird.vx*0.6; b.vy+=bird.vy*0.4; b.vr+=(bird.vx)*0.02;
+      bird.vx*=-0.4; bird.vy*=-0.2;
+      if(imp>4.5){b.ok=0;score+=50;}
+    });
+  }
+  blocks.forEach(b=>{
+    if(!b.ok)return;
+    b.vy+=G*0.9; b.x+=b.vx; b.y+=b.vy; b.rot+=b.vr; b.vx*=0.98; b.vy*=0.99;
+    if(b.y+b.h>400){b.y=400-b.h;b.vy*=-0.25;b.vx*=0.6;if(Math.abs(b.vy)<0.4)b.vy=0;}
+    if(b.y>418) b.ok=0;
+  });
+  if(bird&&bird.dead&&shots>0) spawn();
+  g.fillStyle="#1a140c";g.fillRect(0,0,720,420);
+  g.fillStyle="#3a2a18";g.fillRect(0,400,720,20);
+  g.strokeStyle="#e8c872";g.beginPath();g.moveTo(120,300);g.lineTo(120,400);g.stroke();
+  if(bird&&!bird.fly){g.strokeStyle="#ff6ea8";g.beginPath();g.moveTo(120,300);g.lineTo(bird.x,bird.y);g.stroke();}
+  blocks.forEach(b=>{if(!b.ok)return;g.save();g.translate(b.x+b.w/2,b.y+b.h/2);g.rotate(b.rot);g.fillStyle="#c98b4a";g.fillRect(-b.w/2,-b.h/2,b.w,b.h);g.restore();});
+  if(bird){g.fillStyle="#ff6ea8";g.beginPath();g.arc(bird.x,bird.y,12,0,7);g.fill();}
+  g.fillStyle="#e8c872";g.fillText("Sling Keep  "+score+"  shots "+shots+"  pull back (Crush-the-Castle / Birds)",10,18);
+  requestAnimationFrame(loop);
+})();
+</script>

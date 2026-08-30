@@ -1,0 +1,40 @@
+<!doctype html><meta charset=utf-8><title>Stick Toss</title>
+<style>html,body{margin:0;height:100%;background:#0c0e12;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#12151c}</style>
+<canvas id=c width=640 height=400></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d"),G=0.35;
+function node(x,y){return {x,y,px:x,py:y};}
+let nodes,links,grab=null,score=0;
+function reset(){
+  const n=i=>nodes[i];
+  nodes=[node(280,80),node(280,120),node(260,170),node(300,170),node(250,230),node(310,230)];
+  links=[[0,1,42],[1,2,55],[1,3,55],[2,4,62],[3,5,62],[2,3,48]];
+  score=0;
+}
+reset();
+function pt(e){const r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+c.addEventListener("pointerdown",e=>{const p=pt(e);let best=0,d=1e9;nodes.forEach((n,i)=>{const k=Math.hypot(n.x-p.x,n.y-p.y);if(k<d){d=k;best=i;}});grab=best;});
+c.addEventListener("pointermove",e=>{if(grab==null)return;const p=pt(e);nodes[grab].x=p.x;nodes[grab].y=p.y;});
+c.addEventListener("pointerup",()=>grab=null);
+c.addEventListener("dblclick",reset);
+(function loop(){
+  nodes.forEach(n=>{
+    const vx=n.x-n.px, vy=n.y-n.py;
+    n.px=n.x; n.py=n.y;
+    n.x+=vx*0.99; n.y+=vy*0.99+G;
+    if(n.y>388){n.y=388;n.py=n.y+vy*-0.35; n.px=n.x-vx*0.6; if(Math.abs(vx)>4) score+=1;}
+    if(n.x<8){n.x=8;n.px=n.x+vx*-0.4;} if(n.x>632){n.x=632;n.px=n.x+vx*-0.4;}
+  });
+  for(let k=0;k<8;k++) links.forEach(([a,b,len])=>{
+    const A=nodes[a],B=nodes[b],dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||1,diff=(d-len)/d*0.5;
+    A.x+=dx*diff; A.y+=dy*diff; B.x-=dx*diff; B.y-=dy*diff;
+  });
+  g.fillStyle="#12151c";g.fillRect(0,0,640,400);
+  g.fillStyle="#2a3148";g.fillRect(0,388,640,12);
+  g.strokeStyle="#7dffc3";g.lineWidth=4;g.lineCap="round";
+  links.forEach(([a,b])=>{g.beginPath();g.moveTo(nodes[a].x,nodes[a].y);g.lineTo(nodes[b].x,nodes[b].y);g.stroke();});
+  nodes.forEach((n,i)=>{g.fillStyle=i===0?"#e8c872":"#ff6ea8";g.beginPath();g.arc(n.x,n.y,i===0?10:7,0,7);g.fill();});
+  g.fillStyle="#e8c872";g.fillText("Stick Toss  "+score+"  drag limbs  (Happy Wheels / ragdoll)  dblclick reset",8,18);
+  requestAnimationFrame(loop);
+})();
+</script>

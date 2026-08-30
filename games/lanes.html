@@ -1,0 +1,21 @@
+<!doctype html><meta charset=utf-8><title>Night Lanes</title>
+<style>html,body{margin:0;height:100%;background:#05060c;color:#f4f1e8;font:14px ui-monospace,monospace}canvas{display:block;margin:auto;background:#090b16}</style>
+<canvas id=c width=360 height=640></canvas>
+<script>
+const c=document.getElementById("c"),g=c.getContext("2d");
+let lane=1,obs=[],t=0,live=1,score=0;
+function reset(){lane=1;obs=[];t=0;live=1;score=0;}
+reset();
+addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="a")lane=Math.max(0,lane-1);if(e.key==="ArrowRight"||e.key==="d")lane=Math.min(2,lane+1);if(e.key===" ")reset();});
+c.addEventListener("pointerdown",e=>{const r=c.getBoundingClientRect();lane=e.clientX-r.left<120?0:e.clientX-r.left>240?2:1;if(!live)reset();});
+(function loop(){
+  t++; if(live && t%38===0)obs.push({lane:Math.floor(Math.random()*3),y:-40});
+  g.fillStyle="#090b16";g.fillRect(0,0,360,640);
+  for(let i=0;i<3;i++){g.fillStyle="#151a30";g.fillRect(i*120,0,118,640);}
+  if(live){obs.forEach(o=>o.y+=7+score*0.02);obs=obs.filter(o=>{if(o.y>700){score++;return false;}if(o.y>520&&o.y<600&&o.lane===lane)live=0;return true;});}
+  obs.forEach(o=>{g.fillStyle="#ff6ea8";g.fillRect(o.lane*120+30,o.y,60,40);});
+  g.fillStyle="#7dffc3";g.fillRect(lane*120+35,540,50,50);
+  g.fillStyle="#e8c872";g.fillText("Night Lanes  "+score+(live?"":"  tap/space"),12,22);
+  requestAnimationFrame(loop);
+})();
+</script>
