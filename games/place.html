@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Place</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<style>
+:root{--bg:#121418;--p:#1b1f27;--p2:#232833;--ink:#e8ecf4;--mut:#8b93a7;--ln:#2d3340;--ac:#7dd3c0;--bad:#ef6b6b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,sans-serif;overflow:hidden}
+#app{display:grid;grid-template-rows:auto 1fr auto;height:100%}
+header{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--p);border-bottom:1px solid var(--ln);overflow-x:auto}
+h1{font-size:14px;margin:0 8px 0 0;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);white-space:nowrap}
+.btn,select{background:var(--p2);color:var(--ink);border:1px solid var(--ln);border-radius:8px;padding:7px 10px;font:inherit;cursor:pointer}
+.btn.bad{color:var(--bad)}.btn.good{background:#1d3a35;border-color:#2f5f55;color:var(--ac)}
+.btn.on{background:#3a2a1d;border-color:#c9894a;color:#f0c48a}
+#wrap{position:relative;overflow:hidden;background:#0d0f13}
+#stage{position:absolute;inset:12px;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px #0006;touch-action:none}
+#bg,#layer{position:absolute;inset:0}
+.sticker{position:absolute;left:0;top:0;display:grid;place-items:center;line-height:1;cursor:grab;user-select:none;will-change:transform;filter:drop-shadow(0 6px 8px #0004)}
+.sticker.sel{outline:2px dashed #fff;outline-offset:4px;border-radius:10px}
+.sticker.hit{outline:2px solid var(--bad);outline-offset:3px}
+.sticker.gpos{box-shadow:0 0 0 2px #7dd3c0}.sticker.gneg{box-shadow:0 0 0 2px #c989f0}
+.sticker .g{pointer-events:none}
+#hud{position:absolute;right:20px;top:20px;background:#1b1f27e0;border:1px solid var(--ln);border-radius:12px;padding:10px;min-width:160px;display:none}
+#hud.open{display:block}#hud label{display:block;font-size:11px;color:var(--mut);margin:6px 0 2px}#hud input{width:100%}
+#tray{background:var(--p);border-top:1px solid var(--ln)}
+.cats,#pal{display:flex;gap:6px;overflow-x:auto}
+.cats{padding:8px 10px 0}
+.cat{flex:0 0 auto;padding:6px 10px;border-radius:999px;border:1px solid var(--ln);background:var(--p2);color:var(--mut);cursor:pointer;font-size:12px}
+.cat.on{color:#0c1211;background:var(--ac);border-color:var(--ac);font-weight:650}
+.hint{padding:4px 12px;color:var(--mut);font-size:12px}
+#pal{padding:0 10px 10px}
+.chip{flex:0 0 auto;width:68px;height:68px;border-radius:12px;background:var(--p2);border:1px solid var(--ln);display:grid;place-items:center;position:relative;cursor:grab}
+.chip .g{font-size:30px}.chip small{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:9px;color:var(--mut)}
+.ghost{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-50%);font-size:42px}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>Place</h1>
+  <select id="env"></select>
+  <button class="btn" id="undo">Undo</button>
+  <button class="btn" id="dup">Dup</button>
+  <button class="btn bad" id="del">Del</button>
+  <button class="btn bad" id="clear">Clear</button>
+  <button class="btn good" id="png">PNG</button>
+  <button class="btn on" id="solid">Solid</button>
+  <button class="btn" id="shove">Unstick</button>
+  <button class="btn" id="phys">Physics</button>
+  <select id="grav" disabled>
+    <option value="0">Float</option><option value="1" selected>Down</option>
+    <option value="-0.6">Up</option><option value="0.35">Moon</option>
+  </select>
+  <select id="filters" disabled>
+    <option value="default">Filter: default</option>
+    <option value="ghostsky">Sky ghosts</option>
+    <option value="crowd">People pass</option>
+    <option value="traffic">Cars ignore people</option>
+    <option value="decor">Only walls</option>
+    <option value="layers">Actors vs scenery</option>
+  </select>
+  <select id="groups" disabled>
+    <option value="zero">Groups: 0</option>
+    <option value="ghost">Actors -1</option>
+    <option value="force">Movers +1</option>
+    <option value="clans">Clans -1/-2</option>
+    <option value="mix">Cars +1 people -1</option>
+  </select>
+</header>
+<div id="wrap">
+  <div id="stage"><div id="bg"></div><div id="layer"></div></div>
+  <div id="hud">
+    <label>Size <span id="sv">1.00</span></label>
+    <input id="scale" type="range" min="0.35" max="3.2" step="0.02" value="1"/>
+    <label>Rotate <span id="rv">0°</span></label>
+    <input id="rot" type="range" min="-180" max="180" step="1" value="0"/>
+    <label>Group <span id="gv">0</span></label>
+    <div style="display:flex;gap:6px">
+      <button class="btn" id="gminus">-</button>
+      <button class="btn" id="gzero">0</button>
+      <button class="btn" id="gplus">+</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <button class="btn" id="back">Back</button>
+      <button class="btn" id="front">Front</button>
+      <button class="btn" id="flip">Flip</button>
+    </div>
+  </div>
+</div>
+<div id="tray">
+  <div class="cats" id="cats"></div>
+  <div class="hint">One file. Solid blocks overlap. Physics uses Matter. +group always hits, -group never hits.</div>
+  <div id="pal"></div>
+</div>
+</div>
+<script>
+const ENVS={
+  meadow:["Meadow","linear-gradient(#7ec8ff 0 42%,#8fd36a 42% 100%)"],
+  beach:["Beach","linear-gradient(#89d2ff 0 40%,#f4e2b0 40% 62%,#e8c46a 62% 100%)"],
+  desert:["Desert","linear-gradient(#f0c36b 0 38%,#e0a64a 38% 100%)"],
+  forest:["Forest","linear-gradient(#5aa0d6 0 28%,#2f6b3a 28% 55%,#244f2c 55% 100%)"],
+  snow:["Snow","linear-gradient(#9ec7ea 0 40%,#f2f6fb 40% 100%)"],
+  lake:["Lake","linear-gradient(#7eb7ea 0 36%,#3d8fd4 36% 62%,#6aaa55 62% 100%)"],
+  night:["Night","linear-gradient(#0b1020 0 55%,#1a2238 55% 100%)"],
+  citylot:["Lot","linear-gradient(#8aa7c4 0 34%,#6d727a 34% 100%)"],
+  park:["Park","linear-gradient(#8ec8f0 0 38%,#6fb35a 38% 100%)"],
+  room:["Room","linear-gradient(#d7c4a3 0 18%,#efe6d6 18% 72%,#cbb58d 72% 100%)"],
+  roadplain:["Asphalt","linear-gradient(#6a7380 0 32%,#4a515b 32% 100%)"],
+  dusk:["Dusk","linear-gradient(#f3a26b 0 28%,#c86b7a 28% 48%,#4a6b4e 48% 100%)"]
+};
+const CATS=["land","sky","build","house","road","city","people","cars","life","props"];
+const CATN=["Land","Sky","Buildings","Houses","Roads","City","People","Cars","Animals","Props"];
+const ITEMS=[
+  ["tree1","land","tree","\uD83C\uDF32",1.2],["palm","land","palm","\uD83C\uDF34",1.15],["tree2","land","tree","\uD83C\uDF33",1.2],["cactus","land","cactus","\uD83C\uDF35",1],["rock","land","rock","\uD83E\uDEA8",.9],
+  ["sun","sky","sun","\u2600\uFE0F",1.1],["moon","sky","moon","\uD83C\uDF19",1],["cloud","sky","cloud","\u2601\uFE0F",1.2],
+  ["office","build","office","\uD83C\uDFE2",1.3],["school","build","school","\uD83C\uDFEB",1.2],
+  ["home","house","home","\uD83C\uDFE0",1.1],["villa","house","villa","\uD83C\uDFE1",1.15],["store","house","store","\uD83C\uDFEA",1.1],
+  ["road","road","road","\u2796",1.6],["stop","road","stop","\uD83D\uDED1",.7],["signal","road","signal","\uD83D\uDEA6",.85],
+  ["bench","city","bench","\uD83E\uDE91",.75],["sign","city","sign","\uD83E\uDEA7",.75],
+  ["walk","people","walk","\uD83D\uDEB6",.9],["walkf","people","walk","\uD83D\uDEB6\u200D\u2640\uFE0F",.9],["stand","people","stand","\uD83E\uDDCD",.9],["run","people","run","\uD83C\uDFC3",.9],["work","people","work","\uD83D\uDC77",.9],
+  ["car","cars","car","\uD83D\uDE97",1],["taxi","cars","taxi","\uD83D\uDE95",1],["bus","cars","bus","\uD83D\uDE8C",1.25],["truck","cars","truck","\uD83D\uDE9A",1.15],["bike","cars","bike","\uD83D\uDEB2",.8],
+  ["dog","life","dog","\uD83D\uDC15",.8],["cat","life","cat","\uD83D\uDC08",.75],
+  ["box","props","box","\uD83D\uDCE6",.7],["ball","props","ball","\u26BD",.65]
+];
+const byId=Object.create(null); for(const d of ITEMS) byId[d[0]]=d;
+const STATIC=new Set(["land","sky","build","house","road","city"]);
+const W=1,S=2,K=4,A=8,V=16,P=32,ALL=63;
+const stage=document.getElementById("stage"), layer=document.getElementById("layer"), bg=document.getElementById("bg");
+const envSel=document.getElementById("env"), catsEl=document.getElementById("cats"), pal=document.getElementById("pal"), hud=document.getElementById("hud");
+let env="meadow", cat="land", pending=null, selected=null;
+let list=[], z=1, hist=[], drag=null;
+let solid=true, hits=new Set();
+let phys=false, engine=null, runner=null, walls=[];
+let fMode="default", gMode="zero";
+let sw=1, sh=1, dirty=false;
+function measure(){ const r=stage.getBoundingClientRect(); sw=r.width; sh=r.height; return r; }
+function layerOf(d){ const c=d[1]; return c==="sky"?"sky":c==="cars"?"vehicle":(c==="people"||c==="life")?"actor":c==="props"?"prop":"scenery"; }
+function radX(it){ return (56*it.s*0.38)/sw; }
+function radY(it){ return (56*it.s*0.38)/sh; }
+function hit(a,b){ const dx=(a.x-b.x)/Math.max(radX(a)+radX(b),1e-6); const dy=(a.y-b.y)/Math.max(radY(a)+radY(b),1e-6); return dx*dx+dy*dy<1; }
+function overlaps(it, skip){ for(let i=0;i<list.length;i++){ const o=list[i]; if(o!==it && o!==skip && hit(it,o)) return o; } return null; }
+function markHits(){ hits.clear(); for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++) if(hit(list[i],list[j])){ hits.add(list[i].id); hits.add(list[j].id); } }
+function clamp(v){ return v<-.05?-.05:v>1.05?1.05:v; }
+function resolve(it){ const o=overlaps(it); if(!o) return false; let dx=it.x-o.x, dy=it.y-o.y; if(!dx&&!dy){dx=.01;dy=.01;} const mx=radX(it)+radX(o)+.004-Math.abs(dx), my=radY(it)+radY(o)+.004-Math.abs(dy); if(mx>0 && mx<=my) it.x=clamp(it.x+Math.sign(dx)*mx); else if(my>0) it.y=clamp(it.y+Math.sign(dy)*my); return true; }
+function canPlace(nx,ny,d,ignore){ if(phys||!solid) return true; return !overlaps({x:nx,y:ny,s:d[4],d}, ignore); }
+function bits(ly){ return ly==="world"?W:ly==="sky"?K:ly==="actor"?A:ly==="vehicle"?V:ly==="prop"?P:S; }
+function filterFor(ly){ const category=bits(ly); let mask=ALL; if(fMode==="default") mask=ly==="sky"?W|K:ly==="world"?ALL:ALL&~K; else if(fMode==="ghostsky") mask=ly==="sky"?0:ALL&~K; else if(fMode==="crowd") mask=ly==="actor"?ALL&~K&~A:ly==="sky"?W|K:ALL&~K; else if(fMode==="traffic") mask=ly==="vehicle"?W|S|V|P:ly==="actor"?W|S|A|P:ly==="sky"?W|K:ALL&~K; else if(fMode==="decor") mask=ly==="world"?ALL:W; else if(fMode==="layers") mask=(ly==="actor"||ly==="vehicle"||ly==="prop")?W|S:ly==="scenery"?W|A|V|P:ly==="sky"?W:ALL; return {category,mask,group:0}; }
+function groupFor(it){ if(typeof it.g==="number") return it.g; const ly=layerOf(it.d); if(gMode==="ghost") return ly==="actor"?-1:0; if(gMode==="force") return (ly==="actor"||ly==="vehicle"||ly==="prop")?1:0; if(gMode==="clans") return ly==="actor"?(list.indexOf(it)%2?-2:-1):0; if(gMode==="mix") return ly==="vehicle"?1:ly==="actor"?-1:0; return 0; }
+function applyFilters(){ if(!engine) return; const wf=filterFor("world"); wf.group=0; for(const w of walls) w.collisionFilter=wf; for(const it of list) if(it.body){ const f=filterFor(layerOf(it.d)); f.group=groupFor(it); it.body.collisionFilter=f; } }
+function px(it){ return {x:it.x*sw,y:it.y*sh,r:56*it.s*.38}; }
+function makeBody(it){ if(!engine) return; const p=px(it), st=STATIC.has(it.d[1]), f=filterFor(layerOf(it.d)); f.group=groupFor(it); it.body=Matter.Bodies.circle(p.x,p.y,Math.max(8,p.r),{isStatic:st,restitution:st?.05:.28,friction:st?.9:.35,frictionAir:st?.08:.02,density:st?.004:.0012,angle:(it.r||0)*Math.PI/180,label:it.id,sleepThreshold:28,collisionFilter:f}); Matter.World.add(engine.world,it.body); }
+function dropBody(it){ if(it.body&&engine) Matter.World.remove(engine.world,it.body); it.body=null; }
+function toBody(it){ if(!it.body) return; const p=px(it); Matter.Body.setPosition(it.body,{x:p.x,y:p.y}); Matter.Body.setAngle(it.body,(it.r||0)*Math.PI/180); const cur=it.body.circleRadius||p.r; if(Math.abs(cur-p.r)>1) Matter.Body.scale(it.body,p.r/cur,p.r/cur); }
+function fromBody(it){ if(!it.body) return; it.x=it.body.position.x/sw; it.y=it.body.position.y/sh; it.r=it.body.angle*180/Math.PI; }
+function buildWalls(){ if(!engine) return; if(walls.length) Matter.World.remove(engine.world,walls); const t=80,f=filterFor("world"); walls=[Matter.Bodies.rectangle(sw/2,sh+t/2-4,sw+200,t,{isStatic:true,friction:1,collisionFilter:f}),Matter.Bodies.rectangle(sw/2,-t/2,sw+200,t,{isStatic:true,collisionFilter:f}),Matter.Bodies.rectangle(-t/2,sh/2,t,sh+200,{isStatic:true,collisionFilter:f}),Matter.Bodies.rectangle(sw+t/2,sh/2,t,sh+200,{isStatic:true,collisionFilter:f})]; Matter.World.add(engine.world,walls); }
+function onTick(){ if(!phys) return; for(const it of list){ if(drag&&drag.it===it) continue; fromBody(it); } dirty=true; }
+function pump(){ if(dirty){ for(const it of list) paint(it); dirty=false; } requestAnimationFrame(pump); }
+function startPhys(){ if(typeof Matter==="undefined"){ alert("Matter.js missing"); return; } measure(); engine=Matter.Engine.create({enableSleeping:true}); buildWalls(); for(const it of list) makeBody(it); engine.world.gravity.y=+document.getElementById("grav").value; runner=Matter.Runner.create(); Matter.Runner.run(runner,engine); Matter.Events.on(engine,"afterUpdate",onTick); phys=true; document.getElementById("phys").classList.add("on"); for(const id of ["grav","filters","groups"]) document.getElementById(id).disabled=false; }
+function stopPhys(){ if(engine){ Matter.Events.off(engine,"afterUpdate",onTick); Matter.Runner.stop(runner); for(const it of list) dropBody(it); engine=runner=null; walls=[]; } phys=false; document.getElementById("phys").classList.remove("on"); for(const id of ["grav","filters","groups"]) document.getElementById(id).disabled=true; markHits(); dirty=true; }
+function snap(){ hist.push(list.map(it=>({id:it.id,x:it.x,y:it.y,s:it.s,r:it.r,f:it.f,z:it.z,d:it.d[0],g:it.g}))); if(hist.length>30) hist.shift(); }
+function paint(it){ let el=it.el; if(!el){ el=it.el=document.createElement("div"); el.id=it.id; el.className="sticker"; el.innerHTML="<div class=\"g\">"+it.d[3]+"</div>"; layer.appendChild(el); el.onpointerdown=e=>begin(e,it); } const size=56*it.s; el.style.width=el.style.height=size+"px"; el.style.fontSize=(size*.78)+"px"; el.style.transform="translate("+(it.x*sw-size/2)+"px,"+(it.y*sh-size/2)+"px) rotate("+it.r+"deg) scaleX("+it.f+")"; el.style.zIndex=it.z; el.classList.toggle("sel",selected===it); el.classList.toggle("hit",hits.has(it.id)); const g=groupFor(it); el.classList.toggle("gpos",g>0); el.classList.toggle("gneg",g<0); }
+function select(it){ selected=it; dirty=true; if(!it){ hud.classList.remove("open"); return; } hud.classList.add("open"); document.getElementById("scale").value=it.s; document.getElementById("rot").value=it.r; document.getElementById("sv").textContent=it.s.toFixed(2); document.getElementById("rv").textContent=Math.round(it.r)+"\u00b0"; document.getElementById("gv").textContent=groupFor(it); }
+function place(nx,ny,d){ if(!canPlace(nx,ny,d)){ stage.animate([{boxShadow:"0 0 0 0 #ef6b6b"},{boxShadow:"0 0 0 8px #ef6b6b00"}],{duration:240}); return; } snap(); const it={id:"s"+Date.now().toString(36),d,x:nx,y:ny,s:d[4],r:0,f:1,z:++z}; list.push(it); if(phys) makeBody(it); select(it); if(!phys) markHits(); dirty=true; }
+function begin(e,it){ e.stopPropagation(); e.preventDefault(); select(it); if(it.body){ Matter.Body.setStatic(it.body,true); Matter.Body.setVelocity(it.body,{x:0,y:0}); Matter.Body.setAngularVelocity(it.body,0); } drag={it,ox:e.clientX-it.x*sw,oy:e.clientY-it.y*sh}; snap(); }
+stage.addEventListener("pointermove",e=>{ if(!drag) return; drag.it.x=clamp((e.clientX-drag.ox)/sw); drag.it.y=clamp((e.clientY-drag.oy)/sh); if(!phys&&solid) resolve(drag.it); if(drag.it.body) toBody(drag.it); if(!phys) markHits(); paint(drag.it); });
+window.addEventListener("pointerup",()=>{ if(!drag) return; if(!phys&&solid) resolve(drag.it); if(drag.it.body){ Matter.Body.setStatic(drag.it.body,STATIC.has(drag.it.d[1])); Matter.Body.setVelocity(drag.it.body,{x:0,y:0}); } drag=null; if(!phys){ markHits(); dirty=true; } });
+stage.addEventListener("pointerdown",e=>{ if(e.target!==stage&&e.target!==layer&&e.target!==bg) return; const r=measure(); if(pending) place((e.clientX-r.left)/sw,(e.clientY-r.top)/sh,pending); else select(null); });
+Object.keys(ENVS).forEach(id=>{ const o=document.createElement("option"); o.value=id; o.textContent=ENVS[id][0]; envSel.appendChild(o); });
+envSel.value=env; envSel.onchange=()=>{ env=envSel.value; bg.style.background=ENVS[env][1]; };
+bg.style.background=ENVS[env][1];
+CATS.forEach((id,i)=>{ const b=document.createElement("button"); b.className="cat"+(id===cat?" on":""); b.textContent=CATN[i]; b.onclick=()=>{ cat=id; [...catsEl.children].forEach((x,j)=>x.classList.toggle("on",CATS[j]===cat)); drawPal(); }; catsEl.appendChild(b); });
+function drawPal(){ pal.textContent=""; for(const d of ITEMS) if(d[1]===cat){ const c=document.createElement("div"); c.className="chip"; c.innerHTML="<div class=\"g\">"+d[3]+"</div><small>"+d[2]+"</small>"; c.onpointerdown=ev=>ghostStart(ev,d); c.onclick=()=>{ pending=d; }; pal.appendChild(c); } }
+function ghostStart(ev,d){ ev.preventDefault(); pending=d; const g=document.createElement("div"); g.className="ghost"; g.textContent=d[3]; document.body.appendChild(g); const move=e=>{ g.style.left=e.clientX+"px"; g.style.top=e.clientY+"px"; }; move(ev); const up=e=>{ document.removeEventListener("pointermove",move); document.removeEventListener("pointerup",up); const r=measure(); if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom) place((e.clientX-r.left)/sw,(e.clientY-r.top)/sh,d); g.remove(); }; document.addEventListener("pointermove",move); document.addEventListener("pointerup",up); }
+drawPal();
+document.getElementById("scale").oninput=e=>{ if(!selected) return; const old=selected.s; selected.s=+e.target.value; if(!phys&&solid&&overlaps(selected)){ selected.s=old; e.target.value=old; } document.getElementById("sv").textContent=selected.s.toFixed(2); if(selected.body) toBody(selected); if(!phys) markHits(); paint(selected); };
+document.getElementById("rot").oninput=e=>{ if(!selected) return; selected.r=+e.target.value; document.getElementById("rv").textContent=Math.round(selected.r)+"\u00b0"; if(selected.body) toBody(selected); paint(selected); };
+document.getElementById("back").onclick=()=>{ if(selected){ selected.z=Math.max(1,selected.z-1); paint(selected); } };
+document.getElementById("front").onclick=()=>{ if(selected){ selected.z=++z; paint(selected); } };
+document.getElementById("flip").onclick=()=>{ if(selected){ selected.f*=-1; paint(selected); } };
+document.getElementById("del").onclick=()=>{ if(!selected) return; snap(); dropBody(selected); list=list.filter(i=>i!==selected); if(selected.el) selected.el.remove(); select(null); if(!phys) markHits(); dirty=true; };
+document.getElementById("dup").onclick=()=>{ if(!selected) return; snap(); const s=selected, it={id:"s"+Date.now().toString(36),d:s.d,x:s.x+.04,y:s.y+.04,s:s.s,r:s.r,f:s.f,z:++z,g:s.g}; list.push(it); if(!phys&&solid) resolve(it); if(phys) makeBody(it); select(it); if(!phys) markHits(); dirty=true; };
+document.getElementById("clear").onclick=()=>{ if(!list.length) return; snap(); for(const it of list) dropBody(it); list=[]; layer.textContent=""; select(null); };
+document.getElementById("undo").onclick=()=>{ const last=hist.pop(); if(!last) return; for(const it of list) dropBody(it); layer.textContent=""; list=last.map(r=>({id:r.id,x:r.x,y:r.y,s:r.s,r:r.r,f:r.f,z:r.z,d:byId[r.d]||ITEMS[0],g:r.g})); z=list.reduce((m,i)=>Math.max(m,i.z),1); if(phys) for(const it of list) makeBody(it); select(null); if(!phys) markHits(); dirty=true; };
+document.getElementById("solid").onclick=()=>{ solid=!solid; document.getElementById("solid").classList.toggle("on",solid); if(solid){ snap(); for(let n=0;n<16;n++){ let m=false; for(const it of list) if(resolve(it)) m=true; if(!m) break; } markHits(); dirty=true; } };
+document.getElementById("shove").onclick=()=>{ snap(); for(let n=0;n<16;n++){ let m=false; for(const it of list) if(resolve(it)) m=true; if(!m) break; } markHits(); dirty=true; };
+document.getElementById("phys").onclick=()=>phys?stopPhys():startPhys();
+document.getElementById("grav").onchange=()=>{ if(engine) engine.world.gravity.y=+document.getElementById("grav").value; };
+document.getElementById("filters").onchange=e=>{ fMode=e.target.value; applyFilters(); };
+document.getElementById("groups").onchange=e=>{ gMode=e.target.value; for(const it of list) delete it.g; applyFilters(); dirty=true; if(selected) document.getElementById("gv").textContent=groupFor(selected); };
+function bump(n){ if(!selected) return; selected.g=Math.max(-5,Math.min(5,groupFor(selected)+n)); applyFilters(); paint(selected); document.getElementById("gv").textContent=selected.g; }
+document.getElementById("gminus").onclick=()=>bump(-1);
+document.getElementById("gplus").onclick=()=>bump(1);
+document.getElementById("gzero").onclick=()=>{ if(!selected) return; selected.g=0; applyFilters(); paint(selected); document.getElementById("gv").textContent=0; };
+document.getElementById("png").onclick=()=>{ measure(); const c=document.createElement("canvas"); c.width=sw*2; c.height=sh*2; const ctx=c.getContext("2d"); const m=ENVS[env][1].match(/linear-gradient\((.+)\)/); const g=ctx.createLinearGradient(0,0,0,c.height); if(m) m[1].split(",").map(s=>s.trim()).filter(s=>s.includes("#")).forEach(s=>{ const p=s.split(" "); p.slice(1).map(parseFloat).forEach(n=>g.addColorStop(Math.min(1,n/100),p[0])); }); ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height); ctx.textAlign="center"; ctx.textBaseline="middle"; list.slice().sort((a,b)=>a.z-b.z).forEach(it=>{ ctx.save(); ctx.translate(it.x*c.width,it.y*c.height); ctx.rotate(it.r*Math.PI/180); ctx.scale(it.f,1); const size=56*it.s*2; ctx.font=(size*.78)+"px system-ui,Apple Color Emoji,Segoe UI Emoji"; ctx.fillText(it.d[3],0,0); ctx.restore(); }); const a=document.createElement("a"); a.href=c.toDataURL("image/png"); a.download="place-scene.png"; a.click(); };
+window.addEventListener("resize",()=>{ measure(); if(phys){ buildWalls(); for(const it of list) toBody(it); } dirty=true; });
+document.addEventListener("keydown",e=>{ if(e.key==="Delete"||e.key==="Backspace") document.getElementById("del").click(); if((e.metaKey||e.ctrlKey)&&e.key==="z") document.getElementById("undo").click(); });
+measure(); requestAnimationFrame(pump);
+</script>
+</body>
+</html>

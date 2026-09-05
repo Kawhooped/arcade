@@ -1,6 +1,7 @@
 [
   {"id": "dignity", "title": "Dignity Coin Rush", "tag": "YOURS", "href": "/play/dignity", "blurb": "Hold and sweep. Vacuum coins."},
   {"id": "cyber", "title": "Cyber Town", "tag": "YOURS", "href": "/play/cyber", "blurb": "Layered town. SNES pixels, our art."},
+  {"id": "place", "title": "Place", "tag": "YOURS", "href": "/games/place.html", "blurb": "Stamp a scene. Solid or Matter physics."},
   {"id": "heli", "title": "Cave Copter", "tag": "FLASH", "href": "/games/heli.html", "blurb": "Hold to climb. Flash helicopter cave."},
   {"id": "sling", "title": "Sling Keep", "tag": "FLASH", "href": "/games/sling.html", "blurb": "Pull back. Knock the keep down."},
   {"id": "pegs", "title": "Peg Drop", "tag": "FLASH", "href": "/games/pegs.html", "blurb": "Peggle bounce. Light the pegs."},
