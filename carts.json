@@ -1,4 +1,6 @@
 [
+  {"id": "ghost-turk", "title": "Ghost Turk", "tag": "YOURS", "href": "/games/ghost-turk.html", "blurb": "Move one. Purps multiply. Ghosts never die."},
+  {"id": "dignity-sweep", "title": "Dignity Sweep", "tag": "YOURS", "href": "/games/dignity-sweep.html", "blurb": "Hold to vacuum. Robbers clip the lane."},
   {"id": "dignity", "title": "Dignity Coin Rush", "tag": "YOURS", "href": "/play/dignity", "blurb": "Hold and sweep. Vacuum coins."},
   {"id": "cyber", "title": "Cyber Town", "tag": "YOURS", "href": "/play/cyber", "blurb": "Layered town. SNES pixels, our art."},
   {"id": "place", "title": "Place", "tag": "YOURS", "href": "/games/place.html", "blurb": "Stamp a scene. Solid or Matter physics."},
